@@ -1,38 +1,36 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE TupleSections #-}
 
 module Control.Monad.Trans.Indexed where
 
 import Control.Monad hiding ((>>), (>>=), (=<<))
+import Control.Monad.Indexed
+import Control.Monad.Indexed.Trans
 import Prelude hiding ((>>), (>>=), (=<<))
 
-newtype IndexedT i o m a = IndexedT { unIndexedT :: m (i -> o, a) } deriving Functor
+newtype IndexedT m i o a = IndexedT { unIndexedT :: m (i -> o, a) } deriving Functor
 
-runIndexedT :: Functor m => IndexedT i o m a -> m a
+runIndexedT :: Functor m => IndexedT m i o a -> m a
 runIndexedT = fmap snd . unIndexedT
 
-passThrough :: (forall b. m b -> t b) -> IndexedT i o m a -> IndexedT i o t a
-passThrough f (IndexedT m) = IndexedT $ f m
+mapLift :: (forall b. m b -> t b) -> IndexedT m i o a -> IndexedT t i o a
+mapLift f (IndexedT m) = IndexedT $ f m
 
--- |
--- = `>>=`, etc.
--- We have to provide our own bind here because indexed monads don't fit the type class definition.
--- (i.e. `>>=` expects the input and output monad to be the same but `m x y` doesn't look like `m y z` to GHC.)
--- The convention in all that follows is that a `.` on one side of an operator means that side of the operator expects an indexed monad.
--- e.g. `.>>=` expects to take an indexed monadic value and feed it into a function which returns an unindexed monadic value
-
-infixl 1 >>=
-(>>=) :: Monad m => IndexedT x y m a -> (a -> IndexedT y z m b) -> IndexedT x z m b
-IndexedT m >>= f =
-  IndexedT $ do
-    (g, a) <- m
-    (h, b) <- unIndexedT $ f a
-    return (h . g, b)
-
-infixr 1 =<<
-(=<<) :: Monad m => (a -> IndexedT y z m b) -> IndexedT x y m a -> IndexedT x z m b
-(=<<) = flip (>>=)
-
-infixl 1 >>
-(>>) :: Monad m => IndexedT x y m a -> IndexedT y z m b -> IndexedT x z m b
-a >> b = a >>= const b
+instance (Functor m) => IxFunctor (IndexedT m) where
+  imap = fmap
+instance (Applicative m) => IxPointed (IndexedT m) where
+  ireturn a = IndexedT $ pure (id, a)
+instance (Applicative m) => IxApplicative (IndexedT m) where
+  iap (IndexedT f) (IndexedT a) = IndexedT $ (\(iToJ, aToB) (jToK, a') -> (jToK . iToJ, aToB a')) <$> f <*> a
+instance (Monad m) => IxMonad (IndexedT m) where
+  f `ibind` IndexedT m =
+   IndexedT $ do
+      (g, a) <- m
+      (h, b) <- unIndexedT $ f a
+      return (h . g, b)
+instance IxMonadTrans IndexedT where
+  ilift ma = IndexedT $ (id,) <$> ma

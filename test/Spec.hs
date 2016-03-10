@@ -4,25 +4,28 @@
 {-# LANGUAGE RebindableSyntax #-}
 
 import Control.Concurrent (threadDelay)
-import Control.Monad.Trans.Indexed.Log
+import Control.Monad.Indexed.Syntax
 import Prelude hiding ((>>), (>>=), (=<<))
 
+import Control.Monad.Trans.Indexed.Log
+
+data Unknown = Unknown
 data Print = Print
 data ReadIn = ReadIn
 
-printI :: (Show a) => a -> Performs Print i IO ()
+printI :: (Show a) => a -> Performs Print IO i ()
 printI = logLift Print . print
 
-putStrLnI :: String -> Performs Print i IO ()
+putStrLnI :: String -> Performs Print IO i ()
 putStrLnI = logLift Print . putStrLn
 
-getLineI :: Performs ReadIn i IO String
+getLineI :: Performs ReadIn IO i String
 getLineI = logLift ReadIn getLine
 
 main :: IO ()
 main = runIndexedLogT mainI
 
-mainI :: IndexedLogT '[] '[Print, Unknown, ReadIn, Print] IO ()
+mainI :: IndexedLogT IO '[] '[Print, Unknown, ReadIn, Print] ()
 mainI = do
   printI 'c'
   x <- getLineI
