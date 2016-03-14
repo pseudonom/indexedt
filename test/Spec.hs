@@ -18,9 +18,6 @@ data Wait = Wait
 printI :: (Show a) => a -> Performs Print IO i ()
 printI = logLift Print . print
 
-putStrLnI :: String -> Performs Print IO i ()
-putStrLnI = logLift Print . putStrLn
-
 threadDelayI :: Int -> Performs Wait IO i ()
 threadDelayI = logLift Wait . threadDelay
 

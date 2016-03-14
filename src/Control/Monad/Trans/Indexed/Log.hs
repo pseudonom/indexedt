@@ -6,6 +6,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Control.Monad.Trans.Indexed.Log
   ( module Control.Monad.Trans.Indexed.Log
@@ -30,9 +31,18 @@ runIndexedLogT = runIndexedT . unIndexedLogT
 -- we'll have `'[Unknown, DBTX, TeacherAuth, Unknown]`
 
 type family Elem (a :: k) (as :: [k]) :: Bool where
-  Elem a '[] = 'False
-  Elem a (a ': as) = 'True
-  Elem a (b ': as) = Elem a as
+  a `Elem` '[] = 'False
+  a `Elem` (a ': as) = 'True
+  a `Elem` (b ': as) = Elem a as
+
+infixr 3 &&
+type family (&&) (a :: Bool) (b :: Bool) :: Bool where
+  'True && 'True = 'True
+  a && b = 'False
+
+type family Covers (as :: [k]) (bs :: [k]) :: Bool where
+  as `Covers` '[] = 'True
+  xs `Covers` y ': ys = y `Elem` xs && xs `Covers` ys
 
 infixr 5 :::
 type family (a :: k) ::: (as :: [k]) :: [k] where
