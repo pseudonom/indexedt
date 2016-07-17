@@ -48,7 +48,7 @@ infixr 5 :::
 type family (a :: k) ::: (as :: [k]) :: [k] where
   a ::: a ': as = a ': as
   a ::: as = a ': as
-type Performs p m i a = (ConsCollapse p i) => IndexedLogT m i (p ::: i) a
+type Performs p m a = forall i. (ConsCollapse p i) => IndexedLogT m i (p ::: i) a
 
 class ConsCollapse a b where
   consCollapse :: a -> HList b -> HList (a ::: b)
@@ -59,6 +59,6 @@ instance {-# OVERLAPPABLE #-} ((b ::: (a ': as)) ~ (b ': a ': as)) => ConsCollap
 instance ConsCollapse b ('[]) where
   consCollapse a as = a `HCons` as
 
-logLift :: (ConsCollapse w i) => Applicative m => w -> m a -> Performs w m i a
+logLift :: Applicative m => w -> m a -> Performs w m a
 logLift w ma = IndexedLogT . IndexedT $ (,) Prelude.<$> pure (consCollapse w) Prelude.<*> ma
 

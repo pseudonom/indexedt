@@ -15,10 +15,10 @@ data Unknown = Unknown
 data Print = Print
 data Wait = Wait
 
-printI :: (Show a) => a -> Performs Print IO i ()
+printI :: (Show a) => a -> Performs Print IO ()
 printI = logLift Print . print
 
-threadDelayI :: Int -> Performs Wait IO i ()
+threadDelayI :: Int -> Performs Wait IO ()
 threadDelayI = logLift Wait . threadDelay
 
 main :: IO ()
